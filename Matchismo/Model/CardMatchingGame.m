@@ -12,10 +12,17 @@
 
 @property(nonatomic, readwrite) NSInteger score;
 @property(nonatomic, strong) NSMutableArray *cards; // of Card
+@property(nonatomic, strong) NSMutableArray *faceUpCards; // of Card
+@property(nonatomic, readwrite) NSInteger lastFlipPoints;
 
 @end
 
 @implementation CardMatchingGame
+
+- (void)setNumberOfPicked:(NSUInteger)numberOfPicked
+{
+    _numberOfPicked = numberOfPicked >= 2 ? numberOfPicked :2;
+}
 
 - (NSMutableArray *)cards
 {
@@ -54,25 +61,35 @@ static const int COST_TO_CHOOSE = 1;
     Card *card = [self cardAtIndex:index];
     
     if (!card.isMatched) {
-        if (card.isChosen){
+        if (card.isChosen) {
             card.chosen = NO;
         } else {
-            // match against other chosen cards
+            // put a card in faceUpCard array; match against other chosen cards
+            self.faceUpCards = [[NSMutableArray alloc] initWithArray:@[card]];
+            self.lastFlipPoints = 0;
             for (Card *otherCard in self.cards) {
                 if (otherCard.isChosen && !otherCard.isMatched) {
-                    int matchScore = [card match:@[otherCard]];
-                    if (matchScore) {
-                        self.score += matchScore * MATCH_BONUS;
-                        card.matched = YES;
-                        otherCard.matched = YES;
-                    } else {
-                        self.score -= MISMATCH_PENALTY;
-                        otherCard.chosen = NO;
+                    [self.faceUpCards insertObject:otherCard atIndex:0];
+                    if ([self.faceUpCards count] == self.numberOfPicked) {
+                        int matchScore = [card match:self.faceUpCards];
+                        if (matchScore) {
+                            self.lastFlipPoints = matchScore * MATCH_BONUS;
+                            for (Card *faceUpCard in self.faceUpCards) {
+                                faceUpCard.matched = YES;
+                            }
+                        } else {
+                            self.lastFlipPoints = - MISMATCH_PENALTY;
+                            for (Card *faceUpCard in self.faceUpCards) {
+                                if (faceUpCard != card) faceUpCard.chosen = NO;
+                            }
+                        }
+                        self.matchedCards = [self.faceUpCards copy];
+                        break;
                     }
-                    break; // can only choose 2 cards for now
                 }
             }
-            self.score -= COST_TO_CHOOSE;
+            self.score += self.lastFlipPoints - COST_TO_CHOOSE;
+            self.matchedCards = [self.faceUpCards copy];
             card.chosen = YES;
         }
     }

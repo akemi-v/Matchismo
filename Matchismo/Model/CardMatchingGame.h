@@ -18,5 +18,9 @@
 - (Card *)cardAtIndex:(NSUInteger)index;
 
 @property(nonatomic, readonly) NSInteger score;
+@property(nonatomic) NSUInteger numberOfPicked;
+@property(strong, nonatomic) NSArray *matchedCards;
+@property(nonatomic, readonly) NSInteger lastFlipPoints;
+
 
 @end
